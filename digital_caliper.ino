@@ -115,7 +115,12 @@ void fillMeasuredDistanceOnRuler() {
 void drawMeasuredValue() {
   oled.setCursorXY(18, 16);
   oled.setScale(2);
-  oled.printf("%0.2f %s  ", measurement, inch ? "inch" : "mm");
+
+  if (inch) {
+    oled.printf("%0.3f inch  ", measurement);
+  } else {
+    oled.printf("%0.2f mm  ", measurement);
+  }
 }
 
 void updateOled(bool force = false) {
@@ -132,7 +137,7 @@ void updateOled(bool force = false) {
 void handleData(uint32_t data_copy) {
   // 1. Extract measurement data (first 20 bits, from 0 to 19)
   // Hex mask 0x0FFFFF == 20 bits.
-  uint32_t integerMeasurement = data_copy & 0x0FFFFF;
+  long integerMeasurement = data_copy & 0x0FFFFF;
 
   // 2. Extract flags (next 4 bits, from 20 to 23)
   // First shift 20 bits right, then using hex mask 0x0F extract 4 lower bits.
@@ -140,16 +145,15 @@ void handleData(uint32_t data_copy) {
 
   // 3. Flags handling
   integerMeasurement *= bitRead(flags, 0) ? -1 : 1;  // check the first bit to get value sign (+ or -)
-  inch = bitRead(flags, 3);                   // check if measurements in inches. Received value always in mm, so we need to convert it to inches
+  inch = bitRead(flags, 3);                          // check if measurements in inches. Received value always in mm, so we need to convert it to inches
 
   integerMeasurement = constrain(integerMeasurement, -15000, 15000);  // limit in mm
-  measurement = integerMeasurement / 100.0; // divide received value by 100, as most digital calipers send data in integer format, like 149.42 will be 14942
+  measurement = integerMeasurement / 100.0;                           // divide received value by 100, as most digital calipers send data in integer format, like 149.42 will be 14942
 
   if (inch) measurement /= 25.4;  // convert mm to inches
 
   printResultToOutput(data_copy, flags);
 }
-
 
 void printResultToOutput(uint32_t binaryData, uint8_t flags) {
   Serial.print("Binary data: ");
@@ -193,7 +197,6 @@ void setup() {
 void loop() {
   // if packet is not ready then we don't need to update
   if (new_packet_ready) {
-
     uint32_t data_copy;  // local copy of data for safety reasons
 
     // disable interrupts -> copy data -> enable interrupts, just to be sure that ISR won't change our data
