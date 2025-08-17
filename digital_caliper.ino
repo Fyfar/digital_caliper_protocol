@@ -66,14 +66,11 @@ void IRAM_ATTR read_bit() {
 
   if (bit_counter < 24) {
     if (digitalRead(DATA_PIN) == HIGH) {
-      // Если на DATA высокий уровень, это бит '1'.
-      // Устанавливаем соответствующий бит в нашей переменной.
-      // Используем побитовое 'ИЛИ' и сдвиг. (1UL << bit_counter) создает маску
-      // вида 00...1...00, где '1' стоит на нужной позиции.
+      // if DATA is high, then it's logic '1'.
+      // set corresponding bit
       caliper_raw_data |= (1UL << bit_counter);
     }
-    // Если на DATA низкий уровень, это бит '0'. Ничего делать не нужно,
-    // так как при сбросе caliper_raw_data уже заполнена нулями.
+    // if DATA is low then nothing to do, just ignore
 
     // increment received bits. 'value++' won't work on volatile variable
     uint8_t temp = bit_counter;
@@ -123,6 +120,10 @@ void drawMeasuredValue() {
   }
 }
 
+/**
+ * @brief Update OLED display
+ * @param force update display ignoring update interval
+ */
 void updateOled(bool force = false) {
   uint8_t ms = millis();
   if (force || (uint8_t)(ms - oledTimer) >= UPDATE_OLED_PERIOD) {
@@ -134,6 +135,10 @@ void updateOled(bool force = false) {
   }
 }
 
+/**
+ * @brief Parse chunk of data into binary and then readable value with flags (sign, inch)
+ * @param data_copy copy of binary data
+ */
 void handleData(uint32_t data_copy) {
   // 1. Extract measurement data (first 20 bits, from 0 to 19)
   // Hex mask 0x0FFFFF == 20 bits.
@@ -155,6 +160,11 @@ void handleData(uint32_t data_copy) {
   printResultToOutput(data_copy, flags);
 }
 
+/**
+ * @brief Print full information about data: binary, float value, binary flags
+ * @param binaryData to print
+ * @param flags binary representation of sign and/or inch flag
+ */
 void printResultToOutput(uint32_t binaryData, uint8_t flags) {
   Serial.print("Binary data: ");
   print_binary(binaryData, 24);
